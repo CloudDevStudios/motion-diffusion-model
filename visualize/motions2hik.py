@@ -63,27 +63,21 @@ def motions2hik(motions,  device=0, cuda=True):
 
         elif nfeats == 6:
             motion = rep_motions
-            thetas.append(rep_motions)
-
+            thetas.append(motion)
         # Convert 6D rotation representation to Euler angles
         thetas_6d = motion[0, :-1, :, :nframes].transpose(2, 0, 1)  # [nframes, njoints, 6]
-        thetas_deg = []
-        for frame, d6 in enumerate(thetas_6d):
-            thetas_deg.append([_rotation_6d_to_euler(d6)])
-
+        thetas_deg = [[_rotation_6d_to_euler(d6)] for d6 in thetas_6d]
         thetas.append([np.concatenate(thetas_deg, axis=0)])
         root_translation.append([motion[0, -1, :3, :nframes].transpose(1, 0)])  # [nframes, 3]
 
     thetas = np.concatenate(thetas, axis=0)[:nframes]
     root_translation = np.concatenate(root_translation, axis=0)[:nframes]
 
-    data_dict = {
+    return {
         'joint_map': JOINT_MAP,
         'thetas': thetas.tolist(),  # [nreps, nframes, njoints, 3 (deg)]
-        'root_translation': root_translation.tolist(), # [nreps, nframes, 3 (xyz)]
+        'root_translation': root_translation.tolist(),  # [nreps, nframes, 3 (xyz)]
     }
-
-    return data_dict
 
 
 def _rotation_6d_to_euler(d6):
@@ -97,7 +91,5 @@ def _rotation_6d_to_euler(d6):
     """
     rot_mat = rotation_6d_to_matrix(torch.tensor(d6))
     rot_eul_rad = matrix_to_euler_angles(rot_mat, 'XYZ')
-    eul_deg = torch.rad2deg(rot_eul_rad).numpy()
-
-    return eul_deg
+    return torch.rad2deg(rot_eul_rad).numpy()
 

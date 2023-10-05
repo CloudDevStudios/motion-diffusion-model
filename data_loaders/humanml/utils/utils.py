@@ -46,7 +46,7 @@ def print_current_loss(start_time, niter_state, losses, epoch=None, sub_epoch=No
         s = now - since
         es = s / percent
         rs = es - s
-        return '%s (- %s)' % (as_minutes(s), as_minutes(rs))
+        return f'{as_minutes(s)} (- {as_minutes(rs)})'
 
     if epoch is not None:
         print('epoch: %3d niter: %6d sub_epoch: %2d inner_iter: %4d' % (epoch, niter_state, sub_epoch, inner_iter), end=" ")
@@ -54,7 +54,7 @@ def print_current_loss(start_time, niter_state, losses, epoch=None, sub_epoch=No
     # message = '%s niter: %d completed: %3d%%)' % (time_since(start_time, niter_state / total_niters),
     #                                             niter_state, niter_state / total_niters * 100)
     now = time.time()
-    message = '%s'%(as_minutes(now - start_time))
+    message = f'{as_minutes(now - start_time)}'
 
     for k, v in losses.items():
         message += ' %s: %.4f ' % (k, v)
@@ -73,7 +73,7 @@ def print_current_loss_decomp(start_time, niter_state, total_niters, losses, epo
         s = now - since
         es = s / percent
         rs = es - s
-        return '%s (- %s)' % (as_minutes(s), as_minutes(rs))
+        return f'{as_minutes(s)} (- {as_minutes(rs)})'
 
     print('epoch: %03d inner_iter: %5d' % (epoch, inner_iter), end=" ")
     # now = time.time()
@@ -103,8 +103,8 @@ def save_images_test(visuals, image_path, from_name, to_name):
     if not os.path.exists(image_path):
         os.makedirs(image_path)
 
-    for i, (label, img_numpy) in enumerate(visuals.items()):
-        img_name = "%s_%s_%s" % (from_name, to_name, label)
+    for label, img_numpy in visuals.items():
+        img_name = f"{from_name}_{to_name}_{label}"
         save_path = os.path.join(image_path, img_name)
         save_image(img_numpy, save_path)
 
@@ -138,7 +138,7 @@ def plot_loss_curve(losses, save_path, intervals=500):
     plt.title("Loss During Training")
     for key in losses.keys():
         plt.plot(list_cut_average(losses[key], intervals), label=key)
-    plt.xlabel("Iterations/" + str(intervals))
+    plt.xlabel(f"Iterations/{str(intervals)}")
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig(save_path)
@@ -154,7 +154,7 @@ def list_cut_average(ll, intervals):
     for i in range(bins):
         l_low = intervals * i
         l_high = l_low + intervals
-        l_high = l_high if l_high < len(ll) else len(ll)
+        l_high = min(l_high, len(ll))
         ll_new.append(np.mean(ll[l_low:l_high]))
     return ll_new
 

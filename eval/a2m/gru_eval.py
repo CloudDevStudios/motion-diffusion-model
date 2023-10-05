@@ -118,13 +118,21 @@ def evaluate(args, model, diffusion, data):
                 generated_motions.append(motion.cpu().numpy())
             generated_motions = np.concatenate(generated_motions)
             unconstrained_metrics = evaluate_unconstrained_metrics(generated_motions, device, fast=True)
-            unconstrained_metrics = {k+'_unconstrained': v for k, v in unconstrained_metrics.items()}
+            unconstrained_metrics = {
+                f'{k}_unconstrained': v
+                for k, v in unconstrained_metrics.items()
+            }
 
     except KeyboardInterrupt:
         string = "Saving the evaluation before exiting.."
         print(string)
 
-    metrics = {"feats": {key: [format_metrics(a2mmetrics[seed])[key] for seed in a2mmetrics.keys()] for key in a2mmetrics[allseeds[0]]}}
+    metrics = {
+        "feats": {
+            key: [format_metrics(a2mmetrics[seed])[key] for seed in a2mmetrics]
+            for key in a2mmetrics[allseeds[0]]
+        }
+    }
     if args.unconstrained:
         metrics["feats"] = {**metrics["feats"], **unconstrained_metrics}
 
