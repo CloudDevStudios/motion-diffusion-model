@@ -97,7 +97,7 @@ class LossType(enum.Enum):
     RESCALED_KL = enum.auto()  # like KL, but rescale to estimate the full VLB
 
     def is_vb(self):
-        return self == LossType.KL or self == LossType.RESCALED_KL
+        return self in [LossType.KL, LossType.RESCALED_KL]
 
 
 class GaussianDiffusion:
@@ -205,12 +205,7 @@ class GaussianDiffusion:
         loss = sum_flat(loss * mask.float())  # gives \sigma_euclidean over unmasked elements
         n_entries = a.shape[1] * a.shape[2]
         non_zero_elements = sum_flat(mask) * n_entries
-        # print('mask', mask.shape)
-        # print('non_zero_elements', non_zero_elements)
-        # print('loss', loss)
-        mse_loss_val = loss / non_zero_elements
-        # print('mse_loss_val', mse_loss_val)
-        return mse_loss_val
+        return loss / non_zero_elements
 
 
     def q_mean_variance(self, x_start, t):
@@ -354,10 +349,7 @@ class GaussianDiffusion:
         def process_xstart(x):
             if denoised_fn is not None:
                 x = denoised_fn(x)
-            if clip_denoised:
-                # print('clip_denoised', clip_denoised)
-                return x.clamp(-1, 1)
-            return x
+            return x.clamp(-1, 1) if clip_denoised else x
 
         if self.model_mean_type == ModelMeanType.PREVIOUS_X:
             pred_xstart = process_xstart(
@@ -425,10 +417,9 @@ class GaussianDiffusion:
         This uses the conditioning strategy from Sohl-Dickstein et al. (2015).
         """
         gradient = cond_fn(x, self._scale_timesteps(t), **model_kwargs)
-        new_mean = (
+        return (
             p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float()
         )
-        return new_mean
 
     def condition_mean_with_grad(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
         """
@@ -440,10 +431,9 @@ class GaussianDiffusion:
         This uses the conditioning strategy from Sohl-Dickstein et al. (2015).
         """
         gradient = cond_fn(x, t, p_mean_var, **model_kwargs)
-        new_mean = (
+        return (
             p_mean_var["mean"].float() + p_mean_var["variance"] * gradient.float()
         )
-        return new_mean
 
     def condition_score(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
         """
@@ -656,9 +646,7 @@ class GaussianDiffusion:
             if dump_steps is not None and i in dump_steps:
                 dump.append(deepcopy(sample["sample"]))
             final = sample
-        if dump_steps is not None:
-            return dump
-        return final["sample"]
+        return dump if dump_steps is not None else final["sample"]
 
     def p_sample_loop_progressive(
         self,
@@ -688,11 +676,7 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
-        if noise is not None:
-            img = noise
-        else:
-            img = th.randn(*shape, device=device)
-
+        img = noise if noise is not None else th.randn(*shape, device=device)
         if skip_timesteps and init_image is None:
             init_image = th.zeros_like(img)
 
@@ -951,11 +935,7 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
-        if noise is not None:
-            img = noise
-        else:
-            img = th.randn(*shape, device=device)
-
+        img = noise if noise is not None else th.randn(*shape, device=device)
         if skip_timesteps and init_image is None:
             init_image = th.zeros_like(img)
 
@@ -1144,11 +1124,7 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
-        if noise is not None:
-            img = noise
-        else:
-            img = th.randn(*shape, device=device)
-
+        img = noise if noise is not None else th.randn(*shape, device=device)
         if skip_timesteps and init_image is None:
             init_image = th.zeros_like(img)
 
@@ -1255,7 +1231,7 @@ class GaussianDiffusion:
 
         terms = {}
 
-        if self.loss_type == LossType.KL or self.loss_type == LossType.RESCALED_KL:
+        if self.loss_type in [LossType.KL, LossType.RESCALED_KL]:
             terms["loss"] = self._vb_terms_bpd(
                 model=model,
                 x_start=x_start,
@@ -1266,7 +1242,7 @@ class GaussianDiffusion:
             )["output"]
             if self.loss_type == LossType.RESCALED_KL:
                 terms["loss"] *= self.num_timesteps
-        elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
+        elif self.loss_type in [LossType.MSE, LossType.RESCALED_MSE]:
             model_output = model(x_t, self._scale_timesteps(t), **model_kwargs)
 
             if self.model_var_type in [
@@ -1342,9 +1318,9 @@ class GaussianDiffusion:
                                                   mask[:, :, :, 1:])  # mean_flat((target_vel - model_output_vel) ** 2)
 
             terms["loss"] = terms["rot_mse"] + terms.get('vb', 0.) +\
-                            (self.lambda_vel * terms.get('vel_mse', 0.)) +\
-                            (self.lambda_rcxyz * terms.get('rcxyz_mse', 0.)) + \
-                            (self.lambda_fc * terms.get('fc', 0.))
+                                (self.lambda_vel * terms.get('vel_mse', 0.)) +\
+                                (self.lambda_rcxyz * terms.get('rcxyz_mse', 0.)) + \
+                                (self.lambda_fc * terms.get('fc', 0.))
 
         else:
             raise NotImplementedError(self.loss_type)

@@ -7,7 +7,7 @@ from utils.parser_util import get_cond_mode
 def load_model_wo_clip(model, state_dict):
     missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
     assert len(unexpected_keys) == 0
-    assert all([k.startswith('clip_model.') for k in missing_keys])
+    assert all(k.startswith('clip_model.') for k in missing_keys)
 
 
 def create_model_and_diffusion(args, data):

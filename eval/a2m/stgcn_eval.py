@@ -142,6 +142,11 @@ def evaluate(args, model, diffusion, data):
         stgcn_metrics[seed] = stgcnevaluation.evaluate(model, loaders)
         del loaders
 
-    metrics = {"feats": {key: [format_metrics(stgcn_metrics[seed])[key] for seed in allseeds] for key in stgcn_metrics[allseeds[0]]}}
-
-    return metrics
+    return {
+        "feats": {
+            key: [
+                format_metrics(stgcn_metrics[seed])[key] for seed in allseeds
+            ]
+            for key in stgcn_metrics[allseeds[0]]
+        }
+    }
